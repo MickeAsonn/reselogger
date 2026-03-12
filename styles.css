@@ -6,7 +6,9 @@ header{padding:12px 16px;background:#1976d2;color:#fff}
 .panel{background:#fff;margin:10px;padding:12px;border-radius:12px}
 .row{display:grid;gap:8px;margin:8px 0}
 .row.startstop{grid-template-columns:1fr 1fr}
-button{padding:16px;font-size:18px;border:0;border-radius:12px;color:#fff;background:#1976d2;font-weight:bold}
+.row.dates{grid-template-columns:1fr 1fr}
+label{display:flex;gap:8px;align-items:center}
+button{padding:16px;font-size:16px;border:0;border-radius:12px;color:#fff;background:#1976d2;font-weight:bold}
 #startBtn{background:#2ecc71}
 #stopBtn{background:#e74c3c}
 button:disabled{background:#b5b5b5!important;color:#eee!important}

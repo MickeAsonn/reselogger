@@ -1,4 +1,5 @@
 
+// Remove any old service workers
 if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister())).catch(()=>{});}
 
 (function(){
@@ -6,6 +7,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   const $=id=>document.getElementById(id);
   const statusEl=$('status'), kmEl=$('km');
   const exportExcelBtn=$('exportExcelBtn');
+  const exportRangeBtn=$('exportRangeBtn');
 
   function init(){
     map=L.map('map');
@@ -37,9 +39,17 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
     if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
     stopTime=new Date(); statusEl.textContent='Status: Klar';
     $('startBtn').disabled=false; $('stopBtn').disabled=true; exportExcelBtn.disabled=false;
+    // Spara resan lokalt i IndexedDB
+    saveTripLocal(buildTrip()).catch(e=>console.warn('saveTripLocal',e));
   };
 
-  function buildTrip(){ return { date:(startTime||new Date()).toISOString().slice(0,10), startTime:startTime?startTime.toISOString():null, stopTime:stopTime?stopTime.toISOString():null, totalKm:Number(totalKm.toFixed(3)), points:points.slice() }; }
+  function buildTrip(){ return { id:startTime?startTime.toISOString():String(Date.now()), date:(startTime||new Date()).toISOString().slice(0,10), startTime:startTime?startTime.toISOString():null, stopTime:stopTime?stopTime.toISOString():null, totalKm:Number(totalKm.toFixed(3)), points:points.slice() }; }
+
+  // === IndexedDB för period-export ===
+  const DB='reselogger', STORE='trips';
+  function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open(DB,1); r.onupgradeneeded=()=> r.result.createObjectStore(STORE,{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+  async function saveTripLocal(t){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(t); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+  async function listTrips(){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }); }
 
   // Reverse geocoding → Ort
   const geocache=new Map();
@@ -49,46 +59,62 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
     const k=key(p); if(geocache.has(k)) return geocache.get(k);
     const params=new URLSearchParams({format:'jsonv2',lat:String(p.lat),lon:String(p.lon),addressdetails:'1',zoom:'14','accept-language':'sv',email:'reselogger@example.com'});
     const url=`https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
-    try{ const resp=await fetch(url,{headers:{'Accept':'application/json'}}); if(!resp.ok) throw new Error('HTTP '+resp.status);
-      const data=await resp.json(); const a=data.address||{};
-      let ort=a.town||a.city||a.village||a.municipality||a.hamlet||a.suburb||a.neighbourhood||a.county||'';
-      if(!ort){ const dn=(data.display_name||'').split(','); if(dn.length) ort=dn[0].trim(); }
-      if(!ort) ort='Okänd ort'; geocache.set(k,ort); return ort;
-    }catch(e){ console.warn('Geocoder fel',e); return 'Okänd ort'; }
+    try{ const resp=await fetch(url,{headers:{'Accept':'application/json'}}); if(!resp.ok) throw new Error('HTTP '+resp.status); const data=await resp.json(); const a=data.address||{}; let ort=a.town||a.city||a.village||a.municipality||a.hamlet||a.suburb||a.neighbourhood||a.county||''; if(!ort){ const dn=(data.display_name||'').split(','); if(dn.length) ort=dn[0].trim(); } if(!ort) ort='Okänd ort'; geocache.set(k,ort); return ort; }catch(e){ console.warn('Geocoder fel',e); return 'Okänd ort'; }
   }
 
-  // ====== KOLUMNVIS EXPORT ======
-  async function exportExcelColumns(t){
+  // ====== Export av aktuell resa (en rad + punkter) ======
+  async function exportCurrentTrip(){
     statusEl.textContent='Skapar Excel (hämtar ortnamn)…';
-
-    // Hämta start/stopp-orter (första och sista punkt)
-    const startOrt = await geocodeOrt(t.points[0]);
-    const stopOrt  = await geocodeOrt(t.points[t.points.length-1]);
-
-    // Sammanfattning – exakt ordning som du vill ha:
-    // Datum | Starttid | Stopptid | Total km | Start Ort | Stopp Ort
+    const t=buildTrip();
+    const startOrt=await geocodeOrt(t.points[0]);
+    const stopOrt=await geocodeOrt(t.points[t.points.length-1]);
     const header=['Datum','Starttid','Stopptid','Total km','Start Ort','Stopp Ort'];
     const row=[t.date, t.startTime||'', t.stopTime||'', t.totalKm, startOrt, stopOrt];
-
-    // Punkter: Tid, Ort (samplade för översikt)
     const max=20; const step=Math.max(1, Math.floor((t.points.length||1)/max));
     const rows=[['Tid (ISO)','Ort']];
-    for(let i=0;i<t.points.length;i+=step){
-      const p=t.points[i]; const ort=await geocodeOrt(p);
-      rows.push([new Date(p.ts).toISOString(), ort]);
-      await new Promise(r=>setTimeout(r,60));
-    }
-
+    for(let i=0;i<t.points.length;i+=step){ const p=t.points[i]; const ort=await geocodeOrt(p); rows.push([new Date(p.ts).toISOString(), ort]); await new Promise(r=>setTimeout(r,60)); }
     const wb=XLSX.utils.book_new();
-    const ws1=XLSX.utils.aoa_to_sheet([header, row]);
+    const ws1=XLSX.utils.aoa_to_sheet([header,row]);
     const ws2=XLSX.utils.aoa_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws1, 'Sammanfattning');
     XLSX.utils.book_append_sheet(wb, ws2, 'Punkter');
-
     const safe=(t.date||'resa').replace(/[^0-9A-Za-z_-]/g,'-');
     XLSX.writeFile(wb, `resa_${safe}.xlsx`);
     statusEl.textContent='Excel klar';
   }
 
-  exportExcelBtn.addEventListener('click', ()=> exportExcelColumns(buildTrip()));
+  exportExcelBtn.addEventListener('click', ()=> exportCurrentTrip());
+
+  // ====== Export av period ======
+  exportRangeBtn.addEventListener('click', async ()=>{
+    try{
+      statusEl.textContent='Läser resor…';
+      const all=await listTrips();
+      const from=($('fromDate').value||'0000-01-01');
+      const to=($('toDate').value||'9999-12-31');
+      const sel=all.filter(t=> (t.date||'')>=from && (t.date||'')<=to ).sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+      if(!sel.length){ alert('Inga resor i valt intervall.'); statusEl.textContent='Inga resor i intervall'; return; }
+
+      const wb=XLSX.utils.book_new();
+      const header=['Datum','Starttid','Stopptid','Total km','Start Ort','Stopp Ort'];
+      const rows=[header];
+      for(const t of sel){
+        const startP=t.points && t.points[0];
+        const stopP = t.points && t.points[t.points.length-1];
+        const startOrt=await geocodeOrt(startP);
+        const stopOrt =await geocodeOrt(stopP);
+        rows.push([t.date, t.startTime||'', t.stopTime||'', Number(t.totalKm||0), startOrt, stopOrt]);
+        await new Promise(r=>setTimeout(r,60));
+      }
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, 'Resor');
+      const safeFrom=from.replace(/[^0-9A-Za-z_-]/g,'-');
+      const safeTo=to.replace(/[^0-9A-Za-z_-]/g,'-');
+      XLSX.writeFile(wb, `resor_${safeFrom}_till_${safeTo}.xlsx`);
+      statusEl.textContent='Excel klar';
+    }catch(e){
+      console.error(e); alert('Kunde inte skapa Excel för perioden.'); statusEl.textContent='Fel vid export';
+    }
+  });
+
 })();
