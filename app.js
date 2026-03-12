@@ -1,9 +1,8 @@
 
-// Remove any old service workers
 if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister())).catch(()=>{});}
 
 (function(){
-  let map, marker, polyline; let watchId=null; let points=[]; let totalKm=0; let startTime=null, stopTime=null;
+  let map, marker, polyline, watchId=null, points=[], totalKm=0, startTime=null, stopTime=null;
   const $=id=>document.getElementById(id);
   const statusEl=$('status'), kmEl=$('km');
   const exportExcelBtn=$('exportExcelBtn');
@@ -26,7 +25,6 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
     watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
     $('startBtn').disabled=true; $('stopBtn').disabled=false; exportExcelBtn.disabled=true;
   };
-
   function onPos(pos){
     const {latitude,longitude}=pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now()};
     if(points.length){ const km=dist(points[points.length-1],p); if(km<2){ totalKm+=km; updateKm(); } }
@@ -43,63 +41,48 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
 
   function buildTrip(){ return { date:(startTime||new Date()).toISOString().slice(0,10), startTime:startTime?startTime.toISOString():null, stopTime:stopTime?stopTime.toISOString():null, totalKm:Number(totalKm.toFixed(3)), points:points.slice() }; }
 
-  // ---- Reverse geocoding to get Ort instead of lat/lon ----
+  // Reverse geocoding → Ort
   const geocache=new Map();
-  function key(p){return (Math.round(p.lat*1000)/1000)+','+(Math.round(p.lon*1000)/1000);} // cache by ~100m
-
+  function key(p){return (Math.round(p.lat*1000)/1000)+','+(Math.round(p.lon*1000)/1000);} // ~100 m
   async function geocodeOrt(p){
     const k=key(p); if(geocache.has(k)) return geocache.get(k);
-    const params=new URLSearchParams({
-      format:'jsonv2', lat:String(p.lat), lon:String(p.lon),
-      addressdetails:'1', zoom:'14', 'accept-language':'sv', email:'reselogger@example.com'
-    });
+    const params=new URLSearchParams({format:'jsonv2',lat:String(p.lat),lon:String(p.lon),addressdetails:'1',zoom:'14','accept-language':'sv',email:'reselogger@example.com'});
     const url=`https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
-    try{
-      const resp=await fetch(url,{headers:{'Accept':'application/json'}});
-      if(!resp.ok) throw new Error('HTTP '+resp.status);
-      const data=await resp.json();
-      const addr=data.address||{};
-      let ort=addr.town||addr.city||addr.village||addr.municipality||addr.hamlet||addr.suburb||addr.neighbourhood||addr.county||'';
-      if(!ort){
-        // fallback: ta första kommatexten i display_name
-        const dn=(data.display_name||'').split(','); if(dn.length) ort=dn[0].trim();
-      }
-      if(!ort) ort='Okänd ort';
-      geocache.set(k,ort);
-      return ort;
+    try{ const resp=await fetch(url,{headers:{'Accept':'application/json'}}); if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const data=await resp.json(); const a=data.address||{};
+      let ort=a.town||a.city||a.village||a.municipality||a.hamlet||a.suburb||a.neighbourhood||a.county||'';
+      if(!ort){ const dn=(data.display_name||'').split(','); if(dn.length) ort=dn[0].trim(); }
+      if(!ort) ort='Okänd ort'; geocache.set(k,ort); return ort;
     }catch(e){ console.warn('Geocoder fel',e); return 'Okänd ort'; }
   }
 
-  async function rowsWithOrter(t){
-    const rows=[["Datum",t.date],["Starttid",t.startTime||''],["Stopptid",t.stopTime||''],["Total km",t.totalKm],[],["Tid (ISO)","Ort"]];
-    if(!t.points.length) return rows;
-    // Begränsa anrop: max 20 rader (ca var 5:e punkt för en normal resa)
-    const max=20; const step=Math.max(1, Math.floor(t.points.length/max));
+  // ====== KOLUMNVIS EXPORT ======
+  async function exportExcelColumns(t){
+    statusEl.textContent='Skapar Excel (hämtar ortnamn)…';
+
+    // Ark 1: Sammanfattning (en rad, kolumnvis)
+    const summary=[['Datum','Starttid','Stopptid','Total km'],[t.date, t.startTime||'', t.stopTime||'', t.totalKm]];
+
+    // Ark 2: Punkter (kolumner: Tid, Ort)
+    const max=20; const step=Math.max(1, Math.floor((t.points.length||1)/max));
+    const header=['Tid (ISO)','Ort'];
+    const rows=[header];
     for(let i=0;i<t.points.length;i+=step){
       const p=t.points[i]; const ort=await geocodeOrt(p);
       rows.push([new Date(p.ts).toISOString(), ort]);
-      await new Promise(r=>setTimeout(r,60)); // liten paus
+      await new Promise(r=>setTimeout(r,60));
     }
-    return rows;
+
+    const wb=XLSX.utils.book_new();
+    const ws1=XLSX.utils.aoa_to_sheet(summary);
+    const ws2=XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Sammanfattning');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Punkter');
+
+    const safe=(t.date||'resa').replace(/[^0-9A-Za-z_-]/g,'-');
+    XLSX.writeFile(wb, `resa_${safe}.xlsx`);
+    statusEl.textContent='Excel klar';
   }
 
-  async function exportExcelOrter(t){
-    try{
-      statusEl.textContent='Skapar Excel (hämtar ortnamn)…';
-      const rows=await rowsWithOrter(t);
-      const wb=XLSX.utils.book_new();
-      const ws=XLSX.utils.aoa_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb,ws,'Resa');
-      const safe=(t.date||'resa').replace(/[^0-9A-Za-z_-]/g,'-');
-      XLSX.writeFile(wb,`resa_${safe}.xlsx`);
-      statusEl.textContent='Excel klar';
-    }catch(e){
-      statusEl.textContent='Kunde inte skapa Excel';
-      alert('Kunde inte skapa Excel. Prova i Safari eller Chrome.');
-      console.error(e);
-    }
-  }
-
-  exportExcelBtn.addEventListener('click', ()=> exportExcelOrter(buildTrip()));
-
+  exportExcelBtn.addEventListener('click', ()=> exportExcelColumns(buildTrip()));
 })();
