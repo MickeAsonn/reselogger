@@ -11,5 +11,6 @@ label{display:flex;gap:8px;align-items:center}
 button{padding:16px;font-size:16px;border:0;border-radius:12px;color:#fff;background:#1976d2;font-weight:bold}
 #startBtn{background:#2ecc71}
 #stopBtn{background:#e74c3c}
+#followBtn{background:#455a64}
 button:disabled{background:#b5b5b5!important;color:#eee!important}
 #status,#km{margin:6px 2px}

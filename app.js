@@ -4,34 +4,40 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
 
 (function(){
   let map, marker, polyline, watchId=null, points=[], totalKm=0, startTime=null, stopTime=null;
+  let follow=true; let lastPos=null;
   const $=id=>document.getElementById(id);
   const statusEl=$('status'), kmEl=$('km');
   const exportExcelBtn=$('exportExcelBtn');
   const exportRangeBtn=$('exportRangeBtn');
+  const followBtn=$('followBtn');
 
   function init(){
     map=L.map('map');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
     polyline=L.polyline([], {color:'#1976d2',weight:5}).addTo(map);
     map.setView([58.5877,16.1924],12);
+    map.on('dragstart', ()=>{ follow=false; followBtn.textContent='Följ mig'; });
   }
   init();
 
   function dist(a,b){const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lon-a.lon)*Math.PI/180;const la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
   function updateKm(){ kmEl.textContent=`Totalt: ${totalKm.toFixed(2)} km`; }
 
+  followBtn.onclick=()=>{ follow=true; followBtn.textContent='Följer'; if(lastPos){ map.setView([lastPos.lat,lastPos.lon], Math.max(map.getZoom(),15)); } };
+
   $('startBtn').onclick=()=>{
     points=[]; totalKm=0; startTime=new Date(); stopTime=null; updateKm();
     statusEl.textContent='Status: Registrerar…';
     polyline.setLatLngs([]); if(marker){ map.removeLayer(marker); marker=null; }
     watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
-    $('startBtn').disabled=true; $('stopBtn').disabled=false; exportExcelBtn.disabled=true;
+    $('startBtn').disabled=true; $('stopBtn').disabled=false; exportExcelBtn.disabled=true; follow=true; followBtn.textContent='Följer';
   };
   function onPos(pos){
-    const {latitude,longitude}=pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now()};
+    const {latitude,longitude}=pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now()}; lastPos=p;
     if(points.length){ const km=dist(points[points.length-1],p); if(km<2){ totalKm+=km; updateKm(); } }
-    else { map.setView([p.lat,p.lon],15); }
-    points.push(p); polyline.addLatLng([p.lat,p.lon]); if(!marker) marker=L.marker([p.lat,p.lon]).addTo(map); marker.setLatLng([p.lat,p.lon]);
+    points.push(p); polyline.addLatLng([p.lat,p.lon]);
+    if(!marker) marker=L.marker([p.lat,p.lon]).addTo(map); marker.setLatLng([p.lat,p.lon]);
+    if(follow){ map.setView([p.lat,p.lon], Math.max(map.getZoom(),15)); }
   }
   function onErr(err){ statusEl.textContent='Geo-fel: '+err.message; }
 
@@ -39,7 +45,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
     if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
     stopTime=new Date(); statusEl.textContent='Status: Klar';
     $('startBtn').disabled=false; $('stopBtn').disabled=true; exportExcelBtn.disabled=false;
-    // Spara resan lokalt i IndexedDB
+    // Sparas lokalt för period-export
     saveTripLocal(buildTrip()).catch(e=>console.warn('saveTripLocal',e));
   };
 
@@ -55,14 +61,14 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   const geocache=new Map();
   function key(p){return (Math.round(p.lat*1000)/1000)+','+(Math.round(p.lon*1000)/1000);} // ~100 m
   async function geocodeOrt(p){
-    if(!p) return '—';
+    if(!p) return 'Ingen position';
     const k=key(p); if(geocache.has(k)) return geocache.get(k);
     const params=new URLSearchParams({format:'jsonv2',lat:String(p.lat),lon:String(p.lon),addressdetails:'1',zoom:'14','accept-language':'sv',email:'reselogger@example.com'});
     const url=`https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
     try{ const resp=await fetch(url,{headers:{'Accept':'application/json'}}); if(!resp.ok) throw new Error('HTTP '+resp.status); const data=await resp.json(); const a=data.address||{}; let ort=a.town||a.city||a.village||a.municipality||a.hamlet||a.suburb||a.neighbourhood||a.county||''; if(!ort){ const dn=(data.display_name||'').split(','); if(dn.length) ort=dn[0].trim(); } if(!ort) ort='Okänd ort'; geocache.set(k,ort); return ort; }catch(e){ console.warn('Geocoder fel',e); return 'Okänd ort'; }
   }
 
-  // ====== Export av aktuell resa (en rad + punkter) ======
+  // ====== Export av aktuell resa ======
   async function exportCurrentTrip(){
     statusEl.textContent='Skapar Excel (hämtar ortnamn)…';
     const t=buildTrip();
@@ -85,7 +91,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
 
   exportExcelBtn.addEventListener('click', ()=> exportCurrentTrip());
 
-  // ====== Export av period ======
+  // ====== Export av period (inkludera resor utan punkter som "Ingen position") ======
   exportRangeBtn.addEventListener('click', async ()=>{
     try{
       statusEl.textContent='Läser resor…';
