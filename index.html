@@ -1,0 +1,29 @@
+
+<!DOCTYPE html><html lang='sv'><head>
+<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<link rel='stylesheet' href='styles.css'>
+<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'>
+<script src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'></script>
+</head><body>
+<header><h1>Reselogger</h1></header>
+<main>
+<div id='map'></div>
+<section class='panel'>
+<div class='row startstop'><button id='startBtn'>Starta</button><button id='stopBtn' disabled>Stoppa</button></div>
+<div class='row'><button id='historyBtn'>Historik</button></div>
+<div class='row'><button id='exportExcelBtn' disabled>Exportera Excel</button><button id='exportPdfBtn' disabled>Exportera PDF</button></div>
+<div class='row'><input id='emailTo' placeholder='Din epost'><button id='mailBtn' disabled>Maila</button></div>
+<div class='row'><button id='clearLastBtn' class='danger'>Rensa senaste</button><button id='clearAllBtn' class='danger'>Rensa ALL</button></div>
+<p id='status'>Status: Inaktiv</p><p id='km'>Totalt: 0 km</p>
+</section></main>
+<div id='overlayBlocker' class='overlay hidden'></div>
+<div id='historyModal' class='modal hidden'>
+  <div class='modal-content'>
+    <div class='modal-header'><h2>Historik</h2><button id='closeHistory'>Stäng</button></div>
+    <div id='historyList'></div>
+  </div>
+</div>
+<script src='app.js'></script>
+</body></html>
