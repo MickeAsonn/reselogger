@@ -45,6 +45,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   const geocache=new Map();
   function key(p){return (Math.round(p.lat*1000)/1000)+','+(Math.round(p.lon*1000)/1000);} // ~100 m
   async function geocodeOrt(p){
+    if(!p) return '—';
     const k=key(p); if(geocache.has(k)) return geocache.get(k);
     const params=new URLSearchParams({format:'jsonv2',lat:String(p.lat),lon:String(p.lon),addressdetails:'1',zoom:'14','accept-language':'sv',email:'reselogger@example.com'});
     const url=`https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
@@ -60,13 +61,18 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   async function exportExcelColumns(t){
     statusEl.textContent='Skapar Excel (hämtar ortnamn)…';
 
-    // Ark 1: Sammanfattning (en rad, kolumnvis)
-    const summary=[['Datum','Starttid','Stopptid','Total km'],[t.date, t.startTime||'', t.stopTime||'', t.totalKm]];
+    // Hämta start/stopp-orter (första och sista punkt)
+    const startOrt = await geocodeOrt(t.points[0]);
+    const stopOrt  = await geocodeOrt(t.points[t.points.length-1]);
 
-    // Ark 2: Punkter (kolumner: Tid, Ort)
+    // Sammanfattning – exakt ordning som du vill ha:
+    // Datum | Starttid | Stopptid | Total km | Start Ort | Stopp Ort
+    const header=['Datum','Starttid','Stopptid','Total km','Start Ort','Stopp Ort'];
+    const row=[t.date, t.startTime||'', t.stopTime||'', t.totalKm, startOrt, stopOrt];
+
+    // Punkter: Tid, Ort (samplade för översikt)
     const max=20; const step=Math.max(1, Math.floor((t.points.length||1)/max));
-    const header=['Tid (ISO)','Ort'];
-    const rows=[header];
+    const rows=[['Tid (ISO)','Ort']];
     for(let i=0;i<t.points.length;i+=step){
       const p=t.points[i]; const ort=await geocodeOrt(p);
       rows.push([new Date(p.ts).toISOString(), ort]);
@@ -74,7 +80,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
     }
 
     const wb=XLSX.utils.book_new();
-    const ws1=XLSX.utils.aoa_to_sheet(summary);
+    const ws1=XLSX.utils.aoa_to_sheet([header, row]);
     const ws2=XLSX.utils.aoa_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws1, 'Sammanfattning');
     XLSX.utils.book_append_sheet(wb, ws2, 'Punkter');
