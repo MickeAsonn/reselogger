@@ -10,5 +10,5 @@ button{padding:16px;font-size:18px;border:0;border-radius:12px;color:#fff;backgr
 #stopBtn{background:#e74c3c}
 button:disabled{background:#b5b5b5!important;color:#eee!important}
 .danger{background:#d32f2f!important}
-.modal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45)}
-.modal-content{background:#fff;padding:12px;width:90%;max-height:80vh;overflow:auto;border-radius:12px;z-index:10000}
+.modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45)}
+.modal-content{background:#fff;padding:12px;width:90%;max-height:80vh;overflow:auto;border-radius:12px;z-index:100000}
