@@ -17,3 +17,5 @@ button{padding:14px;font-size:15px;border:0;border-radius:10px;color:#fff;backgr
 .danger{background:#d32f2f}
 button:disabled{background:#b5b5b5!important;color:#eee!important}
 #status,#km{margin:6px 2px}
+.logbox{background:#f0f0f0;padding:6px;border-radius:8px}
+pre{white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto}

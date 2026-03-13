@@ -6,13 +6,13 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Reselogger</title>
-<link rel='stylesheet' href='styles.css?v-excel-daterange-6'>
+<link rel='stylesheet' href='styles.css?v-excel-daterange-7'>
 <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'>
 <script src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'></script>
 </head><body>
 <header><h1>Reselogger</h1></header>
-<div id='version' class='version'>BUILD: v-excel-daterange-6</div>
+<div id='version' class='version'>BUILD: v-excel-daterange-7</div>
 <div id='map'></div>
 <section class='panel'>
   <div class='row startstop'>
@@ -45,8 +45,9 @@
     <button id='cleanEmptyBtn' class='danger'>Rensa tomma resor</button>
     <button id='clearAllBtn' class='danger'>Rensa ALL historik</button>
   </div>
+  <details class='logbox'><summary>Visa felsökningslogg</summary><pre id='debugLog'></pre></details>
   <p id='status'>Status: Inaktiv</p>
   <p id='km'>Totalt: 0 km</p>
 </section>
-<script src='app.js?v-excel-daterange-6'></script>
+<script src='app.js?v-excel-daterange-7'></script>
 </body></html>
