@@ -7,7 +7,7 @@
 <script src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'></script>
 </head><body>
 <header><h1>Mickes Logger</h1></header>
-<div class='version'>BUILD: Mickes Logger v.4.2.4 (60 min timeout)</div>
+<div class='version'>BUILD: Mickes Logger v.4.2.5 (Spara fixerad)</div>
 <div id='map'></div>
 <section class='panel'>
   <div class='row startstop'>
@@ -15,22 +15,11 @@
     <button id='stopBtn' class='btn' disabled>Stoppa</button>
   </div>
   <button id='followBtn' class='btn full'>Följ mig</button>
-  <div class='row metrics'>
-    <div>GPS‑punkter: <span id='pts'>0</span></div>
-    <div>Totalt km: <span id='totkm'>0.00</span></div>
-  </div>
-  <div class='row exportNow'>
-    <button id='exportNowBtn' class='btn full' disabled>Exportera aktuell resa</button>
-  </div>
+  <div class='row metrics'><div>GPS‑punkter: <span id='pts'>0</span></div><div>Totalt km: <span id='totkm'>0.00</span></div></div>
+  <div class='row exportNow'><button id='exportNowBtn' class='btn full' disabled>Exportera aktuell resa</button></div>
   <button id='exportRangeBtn' class='btn full'>Exportera period (Excel)</button>
-  <div class='row dates'>
-    <label>Från: <input type='date' id='fromDate'></label>
-    <label>Till: <input type='date' id='toDate'></label>
-  </div>
-  <div class='row dangerRow'>
-    <button id='cleanEmptyBtn' class='btn danger'>Rensa tomma</button>
-    <button id='clearAllBtn' class='btn danger'>Rensa ALLT</button>
-  </div>
+  <div class='row dates'><label>Från: <input type='date' id='fromDate'></label><label>Till: <input type='date' id='toDate'></label></div>
+  <div class='row dangerRow'><button id='cleanEmptyBtn' class='btn danger'>Rensa tomma</button><button id='clearAllBtn' class='btn danger'>Rensa ALLT</button></div>
   <p id='status'>Status: Inaktiv</p>
 </section>
 <script src='app.js'></script>
