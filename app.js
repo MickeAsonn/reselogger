@@ -1,23 +1,28 @@
-// === A2-2 Brandad Onload-fix: visa startskärm ENDAST i standalone efter window.onload ===
+// === A2-2 Brandad Onload-fix v2 ===
 (function(){
   const inStandalone = (window.navigator.standalone === true);
   if(!inStandalone){ return; }
   // Vänta på full onload så iOS släpper klick-blockeringen
   window.addEventListener('load', ()=>{
-    const target = window.location.href;
-    document.body.innerHTML = `
-      <div class="startScreen">
-        <img src="assets/icon-192.png" alt="ikon">
-        <div class="title">Mickes Reselogger</div>
-        <button id="startPWA" class="cta">Starta Reselogger</button>
-      </div>`;
-    // Bind efter onload – iOS kräver user gesture i stabil DOM
+    const overlay = document.getElementById('pwaStart');
+    if(!overlay) return;
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden','false');
     const btn = document.getElementById('startPWA');
-    if(btn){ btn.addEventListener('click', ()=>{ location.href = target; }); }
+    const target = window.location.href;
+    // Bind både click och touchend för säkerhets skull
+    function openSafari(){
+      try{ location.href = target; }catch(e){}
+    }
+    if(btn){
+      btn.addEventListener('click', openSafari, {passive:true});
+      btn.addEventListener('touchend', openSafari, {passive:true});
+      btn.focus({preventScroll:true});
+    }
   }, {once:true});
 })();
 
-// === Om inte blockerat (dvs Safari-flik) – kör hela v9-app ===
+// === Safari-flik: kör hela v9-appen ===
 if(!(window.navigator.standalone === true)){
 (function(){
   let map, marker, polyline, watchId=null, pts=[], km=0, start=null, stop=null, follow=true;
@@ -38,12 +43,14 @@ if(!(window.navigator.standalone === true)){
       navigator.geolocation.getCurrentPosition(onFix, onErr, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
       watchId=navigator.geolocation.watchPosition(onFix, onErr, {enableHighAccuracy:true, maximumAge:0, timeout:60000});
     } else { $('status').textContent='Denna enhet saknar geolocation.'; return; }
+    // Gör STARTA-knappen grå/inaktiv under pågående resa
     $('startBtn').disabled=true; $('stopBtn').disabled=false; $('exportNowBtn').disabled=true; follow=true;
   };
 
   $('stopBtn').onclick=()=>{
     if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
     stop=new Date(); $('status').textContent='Klar';
+    // Återaktivera STARTA, avaktivera STOPP
     $('startBtn').disabled=false; $('stopBtn').disabled=true; $('exportNowBtn').disabled=false;
   };
 

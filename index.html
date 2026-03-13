@@ -8,7 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head><body>
 <header><h1>Mickes Reselogger</h1></header>
-<div class="version">BUILD: OnloadFix B1 (A2-2)</div>
+<div class="version">BUILD: OnloadFix B1 v2 (A2-2)</div>
+
+<!-- App root (Safari-läge) -->
 <div id="appRoot">
   <div id="map"></div>
   <section class="panel">
@@ -34,5 +36,13 @@
     <p id="status">Status: Inaktiv</p>
   </section>
 </div>
+
+<!-- PWA-start overlay (visas ENDAST i standalone efter onload) -->
+<div id="pwaStart" class="startScreen hidden" aria-hidden="true">
+  <img src="assets/icon-192.png" alt="ikon">
+  <div class="title">Mickes Reselogger</div>
+  <button id="startPWA" class="cta" aria-label="Starta Reselogger">Starta Reselogger</button>
+</div>
+
 <script src="app.js"></script>
 </body></html>
