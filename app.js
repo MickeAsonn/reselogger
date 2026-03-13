@@ -12,10 +12,18 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   const followBtn=$('followBtn');
   const ptCountEl=$('ptCount');
   const lastFixEl=$('lastFix');
-  const cleanEmptyBtn=$('cleanEmptyBtn');
-  const clearAllBtn=$('clearAllBtn');
+  const lastErrEl=$('lastErr');
+  const isSecureEl=$('isSecure');
+  const geoAvailEl=$('geoAvail');
+  const permEl=$('perm');
 
   function init(){
+    isSecureEl.textContent = window.isSecureContext? 'Ja':'Nej';
+    geoAvailEl.textContent = ('geolocation' in navigator)? 'Ja':'Nej';
+    if('permissions' in navigator && navigator.permissions.query){
+      navigator.permissions.query({name:'geolocation'}).then(p=>{ permEl.textContent=p.state; }).catch(()=>{ permEl.textContent='okänt'; });
+    } else { permEl.textContent='okänt'; }
+
     map=L.map('map');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
     polyline=L.polyline([], {color:'#1976d2',weight:5}).addTo(map);
@@ -31,22 +39,23 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   followBtn.onclick=()=>{ follow=true; followBtn.textContent='Följer'; if(lastPos){ map.setView([lastPos.lat,lastPos.lon], Math.max(map.getZoom(),15)); } };
 
   $('startBtn').onclick=()=>{
-    points=[]; totalKm=0; startTime=new Date(); stopTime=null; updateKm(); updateCounters();
+    points=[]; totalKm=0; startTime=new Date(); stopTime=null; updateKm(); updateCounters(); lastErrEl.textContent='–';
     statusEl.textContent='Status: Registrerar…';
     polyline.setLatLngs([]); if(marker){ map.removeLayer(marker); marker=null; }
 
-    // Seed första positionen direkt
+    // Seed första positionen direkt – tvinga prompt och exakt fix
     if(navigator.geolocation){
-      navigator.geolocation.getCurrentPosition((pos)=>{ handlePos(pos,true); }, (err)=>{ console.warn('getCurrentPosition',err); }, {enableHighAccuracy:true, maximumAge:0});
+      navigator.geolocation.getCurrentPosition((pos)=>{ handlePos(pos,true); }, (err)=>{ onErr(err); }, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
     }
 
-    // Starta kontinuerlig uppdatering
-    watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+    // Starta kontinuerlig uppdatering – försök utan cache
+    const opts={enableHighAccuracy:true, maximumAge:0, timeout:60000};
+    watchId=navigator.geolocation.watchPosition(onPos,onErr,opts);
     $('startBtn').disabled=true; $('stopBtn').disabled=false; exportExcelBtn.disabled=true; follow=true; followBtn.textContent='Följer';
   };
 
   function handlePos(pos, seed=false){
-    const {latitude,longitude}=pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now()}; lastPos=p;
+    const {latitude,longitude,accuracy} = pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now(),acc:accuracy}; lastPos=p; console.log('GPS',p);
     if(points.length){ const km=dist(points[points.length-1],p); if(km<2){ totalKm+=km; updateKm(); } }
     else { map.setView([p.lat,p.lon],16); }
     points.push(p); polyline.addLatLng([p.lat,p.lon]); updateCounters();
@@ -55,7 +64,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   }
 
   function onPos(pos){ handlePos(pos,false); }
-  function onErr(err){ statusEl.textContent='Geo-fel: '+err.message; }
+  function onErr(err){ console.error('Geo-fel', err); lastErrEl.textContent = (err && (err.message||err.code))? (err.message||('code '+err.code)) : 'okänt fel'; statusEl.textContent='Geo-fel: '+ lastErrEl.textContent; }
 
   $('stopBtn').onclick=()=>{
     if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
@@ -75,7 +84,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   async function delTrip(id){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
   async function clearAll(){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
 
-  cleanEmptyBtn.onclick=async()=>{
+  $('cleanEmptyBtn').onclick=async()=>{
     try{
       const trips=await listTrips();
       const empties=trips.filter(t=> !t.points || !t.points.length);
@@ -86,7 +95,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
     }catch(e){ console.error(e); alert('Kunde inte rensa tomma resor.'); }
   };
 
-  clearAllBtn.onclick=async()=>{
+  $('clearAllBtn').onclick=async()=>{
     try{
       if(!confirm('Är du säker? Detta raderar ALLA resor permanent.')) return;
       await clearAll();
@@ -159,5 +168,16 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
       console.error(e); alert('Kunde inte skapa Excel för perioden.'); statusEl.textContent='Fel vid export';
     }
   });
+
+  // Testa GPS nu – one-shot
+  $('testGpsBtn').onclick=()=>{
+    if(!navigator.geolocation){ alert('Geolocation saknas i denna webbläsare.'); return; }
+    statusEl.textContent='Testar GPS…';
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{ handlePos(pos,true); statusEl.textContent='GPS OK'; },
+      (err)=>{ onErr(err); },
+      {enableHighAccuracy:true, maximumAge:0, timeout:20000}
+    );
+  };
 
 })();
