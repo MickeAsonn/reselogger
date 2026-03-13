@@ -4,23 +4,28 @@ header{padding:12px;background:#1976d2;color:#fff}
 #map{height:56vh}
 .panel{background:#fff;margin:10px;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 
-/* Start/Stop två kolumner (samma bredd som Rensa-knapparna) */
+/* START/STOP = två kolumner (samma bredd som Rensa-knapparna) */
 .row.startstop{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 
-/* Större, tydliga knappar */
-button{padding:20px;font-size:26px;font-weight:900;border:0;border-radius:12px;color:#fff;background:#1976d2;height:80px}
-button:disabled{background:#b5b5b5!important;color:#eee!important}
+/* Basstil för ALLA knappar */
+.btn{display:flex;align-items:center;justify-content:center;text-align:center;
+     padding:20px;height:80px;width:100%;
+     font-size:26px;font-weight:900;line-height:1.2;
+     border:0;border-radius:12px;color:#fff;background:#1976d2}
+.btn:disabled{background:#b5b5b5 !important;color:#eee !important}
+
+/* Färger */
 #startBtn{background:#2ecc71}
 #stopBtn{background:#e74c3c}
+#followBtn{background:#1e6fd9}
+.danger{background:#d32f2f}
 
-/* Följ mig + Export = full bredd */
-.fullbtn{display:block;width:100%;margin-bottom:12px;background:#455a64}
-.row.exportNow button{display:block;width:100%}
-#exportRangeBtn{display:block;width:100%}
+/* Full-breddklass (Exportera + Följ mig) */
+.full{width:100%;margin-bottom:12px}
 
+/* Övriga rader */
 .row{display:grid;gap:8px;margin:8px 0}
 .row.metrics{grid-template-columns:1fr 1fr}
 .row.dates{grid-template-columns:1fr 1fr}
-.row.dangerRow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.danger{background:#d32f2f}
+.row.dangerRow{grid-template-columns:1fr 1fr;gap:12px}
 label{display:flex;gap:8px;align-items:center}
