@@ -10,6 +10,10 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   const exportExcelBtn=$('exportExcelBtn');
   const exportRangeBtn=$('exportRangeBtn');
   const followBtn=$('followBtn');
+  const ptCountEl=$('ptCount');
+  const lastFixEl=$('lastFix');
+  const cleanEmptyBtn=$('cleanEmptyBtn');
+  const clearAllBtn=$('clearAllBtn');
 
   function init(){
     map=L.map('map');
@@ -22,23 +26,35 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
 
   function dist(a,b){const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lon-a.lon)*Math.PI/180;const la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
   function updateKm(){ kmEl.textContent=`Totalt: ${totalKm.toFixed(2)} km`; }
+  function updateCounters(){ ptCountEl.textContent=String(points.length); lastFixEl.textContent= lastPos? new Date(lastPos.ts).toLocaleTimeString(): '–'; }
 
   followBtn.onclick=()=>{ follow=true; followBtn.textContent='Följer'; if(lastPos){ map.setView([lastPos.lat,lastPos.lon], Math.max(map.getZoom(),15)); } };
 
   $('startBtn').onclick=()=>{
-    points=[]; totalKm=0; startTime=new Date(); stopTime=null; updateKm();
+    points=[]; totalKm=0; startTime=new Date(); stopTime=null; updateKm(); updateCounters();
     statusEl.textContent='Status: Registrerar…';
     polyline.setLatLngs([]); if(marker){ map.removeLayer(marker); marker=null; }
-    watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+
+    // Seed första positionen direkt
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition((pos)=>{ handlePos(pos,true); }, (err)=>{ console.warn('getCurrentPosition',err); }, {enableHighAccuracy:true, maximumAge:0});
+    }
+
+    // Starta kontinuerlig uppdatering
+    watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
     $('startBtn').disabled=true; $('stopBtn').disabled=false; exportExcelBtn.disabled=true; follow=true; followBtn.textContent='Följer';
   };
-  function onPos(pos){
+
+  function handlePos(pos, seed=false){
     const {latitude,longitude}=pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now()}; lastPos=p;
     if(points.length){ const km=dist(points[points.length-1],p); if(km<2){ totalKm+=km; updateKm(); } }
-    points.push(p); polyline.addLatLng([p.lat,p.lon]);
+    else { map.setView([p.lat,p.lon],16); }
+    points.push(p); polyline.addLatLng([p.lat,p.lon]); updateCounters();
     if(!marker) marker=L.marker([p.lat,p.lon]).addTo(map); marker.setLatLng([p.lat,p.lon]);
     if(follow){ map.setView([p.lat,p.lon], Math.max(map.getZoom(),15)); }
   }
+
+  function onPos(pos){ handlePos(pos,false); }
   function onErr(err){ statusEl.textContent='Geo-fel: '+err.message; }
 
   $('stopBtn').onclick=()=>{
@@ -56,6 +72,27 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
   function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open(DB,1); r.onupgradeneeded=()=> r.result.createObjectStore(STORE,{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
   async function saveTripLocal(t){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(t); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
   async function listTrips(){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }); }
+  async function delTrip(id){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+  async function clearAll(){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+
+  cleanEmptyBtn.onclick=async()=>{
+    try{
+      const trips=await listTrips();
+      const empties=trips.filter(t=> !t.points || !t.points.length);
+      if(!empties.length){ alert('Inga tomma resor hittades.'); return; }
+      if(!confirm(`Rensa ${empties.length} tomma resor?`)) return;
+      for(const t of empties){ await delTrip(t.id); }
+      alert(`Rensade ${empties.length} tomma resor.`);
+    }catch(e){ console.error(e); alert('Kunde inte rensa tomma resor.'); }
+  };
+
+  clearAllBtn.onclick=async()=>{
+    try{
+      if(!confirm('Är du säker? Detta raderar ALLA resor permanent.')) return;
+      await clearAll();
+      alert('All historik rensad.');
+    }catch(e){ console.error(e); alert('Kunde inte rensa all historik.'); }
+  };
 
   // Reverse geocoding → Ort
   const geocache=new Map();
@@ -91,7 +128,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then
 
   exportExcelBtn.addEventListener('click', ()=> exportCurrentTrip());
 
-  // ====== Export av period (inkludera resor utan punkter som "Ingen position") ======
+  // ====== Export av period (inkl resor utan punkter som "Ingen position") ======
   exportRangeBtn.addEventListener('click', async ()=>{
     try{
       statusEl.textContent='Läser resor…';
