@@ -1,40 +1,40 @@
-<!DOCTYPE html><html lang="sv"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html><html lang='sv'><head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>Reselogger</title>
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel='stylesheet' href='styles.css'>
+<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'>
+<script src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'></script>
 </head><body>
 <header><h1>Reselogger</h1></header>
-<div class="version">BUILD: v9-safari-force-text-fallback</div>
-<div id="map"></div>
-<section class="panel">
-  <div class="row startstop">
-    <button id="startBtn">Starta</button>
-    <button id="stopBtn" disabled>Stoppa</button>
-    <button id="followBtn">Följ mig</button>
+<div class='version'>BUILD: reanMicke</div>
+<div id='map'></div>
+<section class='panel'>
+  <div class='row startstop'>
+    <button id='startBtn'>Starta</button>
+    <button id='stopBtn' disabled>Stoppa</button>
+    <button id='followBtn'>Följ mig</button>
   </div>
-  <div class="row metrics">
-    <div>GPS‑punkter: <span id="pts">0</span></div>
-    <div>Totalt km: <span id="totkm">0.00</span></div>
+  <div class='row metrics'>
+    <div>GPS‑punkter: <span id='pts'>0</span></div>
+    <div>Totalt km: <span id='totkm'>0.00</span></div>
   </div>
-  <div class="row exportNow">
-    <button id="exportNowBtn" disabled>Exportera aktuell resa (kolumnvis med ort)</button>
+  <div class='row exportNow'>
+    <button id='exportNowBtn' disabled>Exportera aktuell resa (kolumnvis med ort)</button>
   </div>
-  <div class="row dates">
-    <label>Från: <input type="date" id="fromDate"></label>
-    <label>Till: <input type="date" id="toDate"></label>
+  <div class='row dates'>
+    <label>Från: <input type='date' id='fromDate'></label>
+    <label>Till: <input type='date' id='toDate'></label>
   </div>
-  <div class="row">
-    <button id="exportRangeBtn">Exportera period (Excel)</button>
+  <div class='row'>
+    <button id='exportRangeBtn'>Exportera period (Excel)</button>
   </div>
-  <div class="row dangerRow">
-    <button id="cleanEmptyBtn" class="danger">Rensa tomma resor</button>
-    <button id="clearAllBtn" class="danger">Rensa ALL historik</button>
+  <div class='row dangerRow'>
+    <button id='cleanEmptyBtn' class='danger'>Rensa tomma resor</button>
+    <button id='clearAllBtn' class='danger'>Rensa ALL historik</button>
   </div>
-  <p id="status">Status: Inaktiv</p>
+  <p id='status'>Status: Inaktiv</p>
 </section>
-<script src="app.js"></script>
+<script src='app.js'></script>
 </body></html>
