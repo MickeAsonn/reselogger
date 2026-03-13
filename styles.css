@@ -4,10 +4,10 @@ header{padding:12px;background:#1976d2;color:#fff}
 #map{height:56vh}
 .panel{background:#fff;margin:10px;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 
-/* START/STOP = två kolumner (samma bredd som Rensa-knapparna) */
+/* Start/Stop = två kolumner (samma bredd som Rensa-knapparna) */
 .row.startstop{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 
-/* Basstil för ALLA knappar */
+/* Basstil för ALLA knappar – centrerar text i höjd & bredd */
 .btn{display:flex;align-items:center;justify-content:center;text-align:center;
      padding:20px;height:80px;width:100%;
      font-size:26px;font-weight:900;line-height:1.2;
@@ -20,12 +20,26 @@ header{padding:12px;background:#1976d2;color:#fff}
 #followBtn{background:#1e6fd9}
 .danger{background:#d32f2f}
 
-/* Full-breddklass (Exportera + Följ mig) */
+/* Fullbredds-knappar (Följ mig + Export) */
 .full{width:100%;margin-bottom:12px}
+
+/* Datumfält – högre & tydligare */
+.row.dates{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.row.dates label{font-weight:700;color:#333}
+.row.dates input[type=date]{
+  display:block;width:100%;
+  height:52px;                /* HÖGRE */
+  padding:10px 14px;          /* MER LUFT */
+  font-size:18px;             /* TYDLIGARE TEXT */
+  border:2px solid #d0d4da;   /* KONTRAST */
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+  -webkit-appearance:none; appearance:none; /* iOS stilrent */
+}
 
 /* Övriga rader */
 .row{display:grid;gap:8px;margin:8px 0}
 .row.metrics{grid-template-columns:1fr 1fr}
-.row.dates{grid-template-columns:1fr 1fr}
 .row.dangerRow{grid-template-columns:1fr 1fr;gap:12px}
 label{display:flex;gap:8px;align-items:center}
