@@ -1,43 +1,70 @@
-<!DOCTYPE html><html lang="sv"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mickes Reselogger</title>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="assets/icon-192.png">
-<meta name="theme-color" content="#1976d2">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-</head><body>
-<header><h1>Reselogger</h1></header>
-<div class="version">BUILD: v-excel-daterange-9-HS</div>
-<div id="map"></div>
-<section class="panel">
-  <div class="row startstop">
-    <button id="startBtn">Starta</button>
-    <button id="stopBtn" disabled>Stoppa</button>
-    <button id="followBtn">Följ mig</button>
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Reselogger</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="stylesheet" href="/styles.css">
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Reselogger</h1>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <section class="panel">
+      <div class="row">
+        <button id="startBtn">Starta</button>
+        <button id="stopBtn" disabled>Stoppa</button>
+        <button id="historyBtn">Historik</button>
+      </div>
+      <div class="row">
+        <button id="exportExcelBtn" disabled>Exportera Excel</button>
+        <button id="exportPdfBtn" disabled>Exportera PDF</button>
+      </div>
+      <div class="row">
+        <input id="emailTo" type="email" placeholder="Din e‑post" />
+        <button id="mailBtn" disabled>Maila rapport</button>
+      </div>
+      <p id="status">Status: Inaktiv</p>
+      <p id="km">Totalt: 0 km</p>
+    </section>
+  </main>
+
+  <!-- Historikmodal -->
+  <div id="historyModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Historik</h2>
+        <button id="closeHistory">Stäng</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
   </div>
-  <div class="row metrics">
-    <div>GPS‑punkter: <span id="pts">0</span></div>
-    <div>Totalt km: <span id="totkm">0.00</span></div>
-  </div>
-  <div class="row exportNow">
-    <button id="exportNowBtn" disabled>Exportera aktuell resa (kolumnvis med ort)</button>
-  </div>
-  <div class="row dates">
-    <label>Från: <input type="date" id="fromDate"></label>
-    <label>Till: <input type="date" id="toDate"></label>
-  </div>
-  <div class="row">
-    <button id="exportRangeBtn">Exportera period (Excel)</button>
-  </div>
-  <div class="row dangerRow">
-    <button id="cleanEmptyBtn" class="danger">Rensa tomma resor</button>
-    <button id="clearAllBtn" class="danger">Rensa ALL historik</button>
-  </div>
-  <p id="status">Status: Inaktiv</p>
-</section>
-<script src="app.js"></script>
-</body></html>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js');
+      });
+    }
+  </script>
+  <script src="/app.js"></script>
+</body>
+</html>

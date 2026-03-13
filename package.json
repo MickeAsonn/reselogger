@@ -1,0 +1,11 @@
+
+{
+  "name": "reselogger",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "faunadb": "^4.10.1",
+    "nodemailer": "^6.9.8"
+  }
+}
