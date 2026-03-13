@@ -1,43 +1,26 @@
-body{font-family:-apple-system;margin:0;background:#f6f7fb}
+body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f6f7fb}
 header{padding:12px;background:#1976d2;color:#fff}
-.version{background:#111;color:#0f0;padding:6px;font:12px monospace}
+.version{background:#111;color:#0f0;padding:6px 10px;font:12px monospace}
 #map{height:56vh}
-.panel{background:#fff;margin:10px;padding:12px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.panel{background:#fff;margin:10px;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 
-/* Start/Stop row */
-.row.startstop{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-  margin-bottom:14px;
-}
+/* Start/Stop två kolumner (samma bredd som Rensa-knapparna) */
+.row.startstop{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 
-/* Big button style */
-button{
-  padding:24px;
-  font-size:28px;
-  font-weight:900;
-  border:0;
-  border-radius:14px;
-  color:#fff;
-  background:#1976d2;
-  height:90px;
-}
+/* Större, tydliga knappar */
+button{padding:20px;font-size:26px;font-weight:900;border:0;border-radius:12px;color:#fff;background:#1976d2;height:80px}
 button:disabled{background:#b5b5b5!important;color:#eee!important}
-
 #startBtn{background:#2ecc71}
 #stopBtn{background:#e74c3c}
 
-/* Follow-me full width */
-.followFull{
-  width:100%;
-  margin-bottom:16px;
-  background:#455a64;
-}
+/* Följ mig + Export = full bredd */
+.fullbtn{display:block;width:100%;margin-bottom:12px;background:#455a64}
+.row.exportNow button{display:block;width:100%}
+#exportRangeBtn{display:block;width:100%}
 
 .row{display:grid;gap:8px;margin:8px 0}
 .row.metrics{grid-template-columns:1fr 1fr}
 .row.dates{grid-template-columns:1fr 1fr}
-.row.dangerRow{grid-template-columns:1fr 1fr}
+.row.dangerRow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .danger{background:#d32f2f}
 label{display:flex;gap:8px;align-items:center}
