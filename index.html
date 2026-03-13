@@ -8,33 +8,33 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head><body>
 <header><h1>Mickes Reselogger</h1></header>
-<div class='version'>BUILD: Mickes Reselogger</div>
-<div id='map'></div>
-<section class='panel'>
-  <div class='row startstop'>
-    <button id='startBtn'>Starta</button>
-    <button id='stopBtn' disabled>Stoppa</button>
-    <button id='followBtn'>Följ mig</button>
+<div class="version">BUILD: Mickes Reselogger (button-open _top)</div>
+<div id="map"></div>
+<section class="panel">
+  <div class="row startstop">
+    <button id="startBtn">Starta</button>
+    <button id="stopBtn" disabled>Stoppa</button>
+    <button id="followBtn">Följ mig</button>
   </div>
-  <div class='row metrics'>
-    <div>GPS‑punkter: <span id='pts'>0</span></div>
-    <div>Totalt km: <span id='totkm'>0.00</span></div>
+  <div class="row metrics">
+    <div>GPS‑punkter: <span id="pts">0</span></div>
+    <div>Totalt km: <span id="totkm">0.00</span></div>
   </div>
-  <div class='row exportNow'>
-    <button id='exportNowBtn' disabled>Exportera aktuell resa</button>
+  <div class="row exportNow">
+    <button id="exportNowBtn" disabled>Exportera aktuell resa (kolumnvis med ort)</button>
   </div>
-  <div class='row dates'>
-    <label>Från: <input type='date' id='fromDate'></label>
-    <label>Till: <input type='date' id='toDate'></label>
+  <div class="row dates">
+    <label>Från: <input type="date" id="fromDate"></label>
+    <label>Till: <input type="date" id="toDate"></label>
   </div>
-  <div class='row'>
-    <button id='exportRangeBtn'>Exportera period (Excel)</button>
+  <div class="row">
+    <button id="exportRangeBtn">Exportera period (Excel)</button>
   </div>
-  <div class='row dangerRow'>
-    <button id='cleanEmptyBtn' class='danger'>Rensa tomma resor</button>
-    <button id='clearAllBtn' class='danger'>Rensa ALL historik</button>
+  <div class="row dangerRow">
+    <button id="cleanEmptyBtn" class="danger">Rensa tomma resor</button>
+    <button id="clearAllBtn" class="danger">Rensa ALL historik</button>
   </div>
-  <p id='status'>Status: Inaktiv</p>
+  <p id="status">Status: Inaktiv</p>
 </section>
-<script src='app.js'></script>
+<script src="app.js"></script>
 </body></html>
