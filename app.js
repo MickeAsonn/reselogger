@@ -1,10 +1,34 @@
-// Force-open in Safari from iOS Homescreen (standalone) with short message
-if (window.navigator.standalone === true) {
-  document.body.innerHTML = "<div style='padding:40px;font-size:22px;text-align:center;font-family:-apple-system;'>Öppnar i Safari…</div>";
-  setTimeout(()=>{
-    window.location.href = "x-web-search://?url=" + encodeURIComponent(window.location.href);
-  }, 300);
-}
+// Force-open in Safari from iOS Homescreen (standalone)
+(function(){
+  if (window.navigator.standalone === true) {
+    // Show message immediately
+    document.body.innerHTML = "<div class='fallbackBox'>Öppnar i Safari…<br/><small>Om inget händer på 1 sekund, tryck knappen nedan.</small><br/><a id='openSafari' href='#'>Öppna i Safari nu</a></div>";
+
+    var target = window.location.href;
+
+    // 1) Try x-web-search (vanligast)
+    setTimeout(function(){
+      try { window.location.href = "x-web-search://?url=" + encodeURIComponent(target); } catch(e) {}
+    }, 100);
+
+    // 2) Fallback efter 800 ms – försök igen
+    setTimeout(function(){
+      try { window.location.href = "x-web-search://?url=" + encodeURIComponent(target); } catch(e) {}
+    }, 800);
+
+    // 3) Sista fallback: ge en klickbar knapp som alltid öppnar Safari
+    document.addEventListener('click', function(ev){
+      var a = ev.target.closest('#openSafari');
+      if(!a) return;
+      ev.preventDefault();
+      try { window.location.href = "x-web-search://?url=" + encodeURIComponent(target); } catch(e) {}
+      // extra safety: also open normal https link (Safari tar över från standalone)
+      setTimeout(function(){ window.location.href = target; }, 300);
+    });
+
+    return; // stop loading rest of app while in standalone screen
+  }
+})();
 
 let map, marker, polyline, watchId=null, pts=[], km=0, start=null, stop=null, follow=true;
 const $=id=>document.getElementById(id);
@@ -60,7 +84,7 @@ $('exportNowBtn').onclick=async()=>{
   const wb=XLSX.utils.book_new();
   const ws1=XLSX.utils.aoa_to_sheet([["Datum","Starttid","Stopptid","Total km","Start Ort","Stopp Ort"],[t.date,t.startTime||'',t.stopTime||'',t.totalKm,sO,eO]]);
   XLSX.utils.book_append_sheet(wb,ws1,'Sammanfattning');
-  const rows=[["Tid (ISO)","Ort"]]; const max=20, step=Math.max(1, Math.floor((t.points.length||1)/max)); for(let i=0;i<t.points.length;i+=step){ rows.push([new Date(t.points[i].ts).toISOString(), await ortFor(t.points[i])]); }
+  const rows=[["Tid (ISO)","Ort"]]; const max=20, step=Math.max(1, Math.floor((t.points.length||1)/max)); for(let i=0;i*t.points.length;i+=step){ rows.push([new Date(t.points[i].ts).toISOString(), await ortFor(t.points[i])]); }
   const ws2=XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb,ws2,'Punkter');
   const safe=(t.date||'resa').replace(/[^0-9A-Za-z_-]/g,'-'); XLSX.writeFile(wb,'resa_'+safe+'.xlsx');
 };
