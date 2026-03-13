@@ -1,6 +1,9 @@
-// ONLY change vs v9: redirect when opened as standalone (iOS homescreen)
+// Force-open in Safari from iOS Homescreen (standalone) with short message
 if (window.navigator.standalone === true) {
-  window.location.href = window.location.href;
+  document.body.innerHTML = "<div style='padding:40px;font-size:22px;text-align:center;font-family:-apple-system;'>Öppnar i Safari…</div>";
+  setTimeout(()=>{
+    window.location.href = "x-web-search://?url=" + encodeURIComponent(window.location.href);
+  }, 300);
 }
 
 let map, marker, polyline, watchId=null, pts=[], km=0, start=null, stop=null, follow=true;
