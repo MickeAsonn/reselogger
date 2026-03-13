@@ -1,73 +1,105 @@
-// Safari-only version: no PWA/start overlay – full v9 with proper button states
-let map, marker, polyline, watchId=null, pts=[], km=0, start=null, stop=null, follow=true;
-const $=id=>document.getElementById(id);
-function kmDist(a,b){const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180;const dLon=(b.lon-a.lon)*Math.PI/180;const la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
-function ui(){ $('pts').textContent=String(pts.length); $('totkm').textContent=km.toFixed(2); }
 
-// Map
-map=L.map('map').setView([58.5877,16.1924],12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-polyline=L.polyline([], {color:'#1976d2',weight:5}).addTo(map);
-map.on('dragstart', ()=>{follow=false;});
+// Remove any old service workers
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister())).catch(()=>{});}
 
-// Start
-$('startBtn').onclick=()=>{
-  pts=[]; km=0; start=new Date(); stop=null; ui(); $('status').textContent='Startar GPS…';
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(onFix, onErr, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
-    watchId=navigator.geolocation.watchPosition(onFix, onErr, {enableHighAccuracy:true, maximumAge:0, timeout:60000});
-  } else { $('status').textContent='Denna enhet saknar geolocation.'; return; }
-  // Disable START, enable STOP
-  $('startBtn').disabled=true; $('stopBtn').disabled=false; $('exportNowBtn').disabled=true; follow=true;
-};
+(function(){
+  let map, marker, polyline; let watchId=null; let points=[]; let totalKm=0; let startTime=null, stopTime=null;
+  const $=id=>document.getElementById(id);
+  const statusEl=$('status'), kmEl=$('km');
+  const exportExcelBtn=$('exportExcelBtn');
 
-// Stop
-$('stopBtn').onclick=()=>{
-  if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
-  stop=new Date(); $('status').textContent='Klar';
-  // Enable START, disable STOP
-  $('startBtn').disabled=false; $('stopBtn').disabled=true; $('exportNowBtn').disabled=false;
-};
+  function init(){
+    map=L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    polyline=L.polyline([], {color:'#1976d2',weight:5}).addTo(map);
+    map.setView([58.5877,16.1924],12);
+  }
+  init();
 
-function onFix(p){ const o={lat:p.coords.latitude, lon:p.coords.longitude, ts:Date.now()}; if(pts.length){ const d=kmDist(pts[pts.length-1],o); if(d<2) km+=d; } else { map.setView([o.lat,o.lon],15); }
-  pts.push(o); polyline.addLatLng([o.lat,o.lon]); if(!marker) marker=L.marker([o.lat,o.lon]).addTo(map); marker.setLatLng([o.lat,o.lon]); if(follow) map.setView([o.lat,o.lon], Math.max(map.getZoom(),15)); ui(); $('status').textContent='GPS aktiv'; }
-function onErr(err){ $('status').textContent='GPS-fel: '+(err&&err.message||'okänt'); }
-$('followBtn').onclick=()=>{ follow=true; if(pts.length) map.setView([pts[pts.length-1].lat, pts[pts.length-1].lon], Math.max(map.getZoom(),15)); };
+  function dist(a,b){const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lon-a.lon)*Math.PI/180;const la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
+  function updateKm(){ kmEl.textContent=`Totalt: ${totalKm.toFixed(2)} km`; }
 
-// Reverse geocoding
-const geoCache=new Map(); function cacheKey(p){ return (Math.round(p.lat*1000)/1000)+','+(Math.round(p.lon*1000)/1000); }
-async function ortFor(p){ if(!p) return 'Ingen position'; const k=cacheKey(p); if(geoCache.has(k)) return geoCache.get(k); const qs=new URLSearchParams({format:'jsonv2',lat:String(p.lat),lon:String(p.lon),addressdetails:'1',zoom:'14','accept-language':'sv',email:'reselogger@example.com'}); try{ const r=await fetch('https://nominatim.openstreetmap.org/reverse?'+qs.toString(),{headers:{'Accept':'application/json'}}); if(!r.ok) throw new Error('HTTP '+r.status); const d=await r.json(); const a=d.address||{}; let o=a.town||a.city||a.village||a.municipality||a.hamlet||a.suburb||a.neighbourhood||a.county||''; if(!o){ const dn=(d.display_name||'').split(','); if(dn.length) o=dn[0].trim(); } if(!o) o='Okänd ort'; geoCache.set(k,o); return o; } catch(e){ return 'Okänd ort'; } }
+  $('startBtn').onclick=()=>{
+    points=[]; totalKm=0; startTime=new Date(); stopTime=null; updateKm();
+    statusEl.textContent='Status: Registrerar…';
+    polyline.setLatLngs([]); if(marker){ map.removeLayer(marker); marker=null; }
+    watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+    $('startBtn').disabled=true; $('stopBtn').disabled=false; exportExcelBtn.disabled=true;
+  };
 
-// Export current trip (summary + sampled points)
-$('exportNowBtn').onclick=async()=>{
-  const t={ id:start?start.toISOString():String(Date.now()), date:(start||new Date()).toISOString().slice(0,10), startTime:start?start.toISOString():null, stopTime:stop?stop.toISOString():null, totalKm:Number(km.toFixed(3)), points:pts.slice() };
-  const startOrt=await ortFor(t.points[0]); const stopOrt=await ortFor(t.points[t.points.length-1]);
-  const wb=XLSX.utils.book_new();
-  const ws1=XLSX.utils.aoa_to_sheet([["Datum","Starttid","Stopptid","Total km","Start Ort","Stopp Ort"],[t.date,t.startTime||'',t.stopTime||'',t.totalKm,startOrt,stopOrt]]);
-  XLSX.utils.book_append_sheet(wb,ws1,'Sammanfattning');
-  const rows=[["Tid (ISO)","Ort"]]; const max=20, step=Math.max(1, Math.floor((t.points.length||1)/max));
-  for(let i=0;i<t.points.length;i+=step){ rows.push([new Date(t.points[i].ts).toISOString(), await ortFor(t.points[i])]); }
-  const ws2=XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb,ws2,'Punkter');
-  const safe=(t.date||'resa').replace(/[^0-9A-Za-z_-]/g,'-'); XLSX.writeFile(wb,'resa_'+safe+'.xlsx');
-};
+  function onPos(pos){
+    const {latitude,longitude}=pos.coords; const p={lat:latitude,lon:longitude,ts:Date.now()};
+    if(points.length){ const km=dist(points[points.length-1],p); if(km<2){ totalKm+=km; updateKm(); } }
+    else { map.setView([p.lat,p.lon],15); }
+    points.push(p); polyline.addLatLng([p.lat,p.lon]); if(!marker) marker=L.marker([p.lat,p.lon]).addTo(map); marker.setLatLng([p.lat,p.lon]);
+  }
+  function onErr(err){ statusEl.textContent='Geo-fel: '+err.message; }
 
-// IndexedDB for ranges & cleanup
-const DB='reselogger', STORE='trips';
-function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open(DB,1); r.onupgradeneeded=()=> r.result.createObjectStore(STORE,{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
-async function allTrips(){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }); }
-async function delTrip(id){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
-async function clearAll(){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+  $('stopBtn').onclick=()=>{
+    if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
+    stopTime=new Date(); statusEl.textContent='Status: Klar';
+    $('startBtn').disabled=false; $('stopBtn').disabled=true; exportExcelBtn.disabled=false;
+  };
 
-$('cleanEmptyBtn').onclick=async()=>{ const list=await allTrips(); const empties=list.filter(t=> !t.points || !t.points.length); if(!empties.length) return alert('Inga tomma resor'); if(!confirm('Rensa '+empties.length+' tomma resor?')) return; for(const t of empties){ await delTrip(t.id); } alert('Klart'); };
-$('clearAllBtn').onclick=async()=>{ if(!confirm('Rensa ALL historik?')) return; await clearAll(); alert('Historik rensad'); };
+  function buildTrip(){ return { date:(startTime||new Date()).toISOString().slice(0,10), startTime:startTime?startTime.toISOString():null, stopTime:stopTime?stopTime.toISOString():null, totalKm:Number(totalKm.toFixed(3)), points:points.slice() }; }
 
-$('exportRangeBtn').onclick=async()=>{
-  const list=await allTrips(); const from=($('fromDate').value||'0000-01-01'); const to=($('toDate').value||'9999-12-31');
-  const sel=list.filter(t=> (t.date||'')>=from && (t.date||'')<=to ).sort((a,b)=> (a.date||'').localeCompare(b.date||''));
-  if(!sel.length){ alert('Inga resor i valt intervall.'); return; }
-  const wb=XLSX.utils.book_new(); const rows=[["Datum","Starttid","Stopptid","Total km","Start Ort","Stopp Ort"]];
-  for(const t of sel){ const sP=t.points&&t.points[0]; const eP=t.points&&t.points[t.points.length-1]; rows.push([t.date, t.startTime||'', t.stopTime||'', Number(t.totalKm||0), await ortFor(sP), await ortFor(eP)]); }
-  const ws=XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb,ws,'Resor');
-  const f=from.replace(/[^0-9A-Za-z_-]/g,'-'), tt=to.replace(/[^0-9A-Za-z_-]/g,'-');
-  XLSX.writeFile(wb,'resor_'+f+'_till_'+tt+'.xlsx');
-};
+  // ---- Reverse geocoding to get Ort instead of lat/lon ----
+  const geocache=new Map();
+  function key(p){return (Math.round(p.lat*1000)/1000)+','+(Math.round(p.lon*1000)/1000);} // cache by ~100m
+
+  async function geocodeOrt(p){
+    const k=key(p); if(geocache.has(k)) return geocache.get(k);
+    const params=new URLSearchParams({
+      format:'jsonv2', lat:String(p.lat), lon:String(p.lon),
+      addressdetails:'1', zoom:'14', 'accept-language':'sv', email:'reselogger@example.com'
+    });
+    const url=`https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
+    try{
+      const resp=await fetch(url,{headers:{'Accept':'application/json'}});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const data=await resp.json();
+      const addr=data.address||{};
+      let ort=addr.town||addr.city||addr.village||addr.municipality||addr.hamlet||addr.suburb||addr.neighbourhood||addr.county||'';
+      if(!ort){
+        // fallback: ta första kommatexten i display_name
+        const dn=(data.display_name||'').split(','); if(dn.length) ort=dn[0].trim();
+      }
+      if(!ort) ort='Okänd ort';
+      geocache.set(k,ort);
+      return ort;
+    }catch(e){ console.warn('Geocoder fel',e); return 'Okänd ort'; }
+  }
+
+  async function rowsWithOrter(t){
+    const rows=[["Datum",t.date],["Starttid",t.startTime||''],["Stopptid",t.stopTime||''],["Total km",t.totalKm],[],["Tid (ISO)","Ort"]];
+    if(!t.points.length) return rows;
+    // Begränsa anrop: max 20 rader (ca var 5:e punkt för en normal resa)
+    const max=20; const step=Math.max(1, Math.floor(t.points.length/max));
+    for(let i=0;i<t.points.length;i+=step){
+      const p=t.points[i]; const ort=await geocodeOrt(p);
+      rows.push([new Date(p.ts).toISOString(), ort]);
+      await new Promise(r=>setTimeout(r,60)); // liten paus
+    }
+    return rows;
+  }
+
+  async function exportExcelOrter(t){
+    try{
+      statusEl.textContent='Skapar Excel (hämtar ortnamn)…';
+      const rows=await rowsWithOrter(t);
+      const wb=XLSX.utils.book_new();
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb,ws,'Resa');
+      const safe=(t.date||'resa').replace(/[^0-9A-Za-z_-]/g,'-');
+      XLSX.writeFile(wb,`resa_${safe}.xlsx`);
+      statusEl.textContent='Excel klar';
+    }catch(e){
+      statusEl.textContent='Kunde inte skapa Excel';
+      alert('Kunde inte skapa Excel. Prova i Safari eller Chrome.');
+      console.error(e);
+    }
+  }
+
+  exportExcelBtn.addEventListener('click', ()=> exportExcelOrter(buildTrip()));
+
+})();
