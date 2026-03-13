@@ -17,5 +17,3 @@ button:disabled{background:#b5b5b5!important;color:#eee!important}
 .danger{background:#d32f2f}
 label{display:flex;gap:8px;align-items:center}
 #status{margin:10px 4px;color:#444}
-.diag{position:fixed;left:8px;bottom:8px;z-index:9999;background:#111;color:#0f0;padding:8px 10px;font:12px monospace;border-radius:8px;opacity:.95;max-width:92vw}
-.diag button{padding:6px 8px;background:#1976d2;border:0;border-radius:6px;color:#fff;font-weight:700;margin-top:6px}
