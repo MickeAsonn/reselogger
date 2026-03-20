@@ -1,26 +1,12 @@
-<!DOCTYPE html><html lang='sv'><head>
-<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>Mickes Logger</title>
-<link rel='stylesheet' href='styles.css'>
-<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'>
-<script src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'></script>
+
+<!doctype html><html lang='sv'><head>
+<meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<meta name='theme-color' content='#000'><link rel='manifest' href='manifest.webmanifest'>
+<title>Körjournal</title>
+<script src='https://unpkg.com/react@17/umd/react.development.js'></script>
+<script src='https://unpkg.com/react-dom@17/umd/react-dom.development.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'></script>
-</head><body>
-<header><h1>Mickes Logger</h1></header>
-<div class='version'>BUILD: Mickes Logger v.4.2.6 (Safari IOS)</div>
-<div id='map'></div>
-<section class='panel'>
-  <div class='row startstop'>
-    <button id='startBtn' class='btn'>Starta</button>
-    <button id='stopBtn' class='btn' disabled>Stoppa</button>
-  </div>
-  <button id='followBtn' class='btn full'>Följ mig</button>
-  <div class='row metrics'><div>GPS‑punkter: <span id='pts'>0</span></div><div>Totalt km: <span id='totkm'>0.00</span></div></div>
-  <div class='row exportNow'><button id='exportNowBtn' class='btn full' disabled>Exportera aktuell resa</button></div>
-  <button id='exportRangeBtn' class='btn full'>Exportera period (Excel)</button>
-  <div class='row dates'><label>Från: <input type='date' id='fromDate'></label><label>Till: <input type='date' id='toDate'></label></div>
-  <div class='row dangerRow'><button id='cleanEmptyBtn' class='btn danger'>Rensa tomma</button><button id='clearAllBtn' class='btn danger'>Rensa ALLT</button></div>
-  <p id='status'>Status: Inaktiv</p>
-</section>
+<style>body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;} input,button,select{display:block;width:100%;margin:8px 0;padding:12px;border:none;border-radius:8px;background:#1f2937;color:#fff;font-size:16px;} label{margin-top:12px;} h2{margin-top:24px;}</style></head><body>
+<div id='root'></div>
 <script src='app.js'></script>
 </body></html>
